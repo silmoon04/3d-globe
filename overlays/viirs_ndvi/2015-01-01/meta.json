@@ -1,0 +1,13 @@
+{
+  "id": "viirs_ndvi",
+  "name": "VIIRS NDVI",
+  "units": "unitless",
+  "date": "2015-01-01",
+  "width": 4096,
+  "height": 2048,
+  "min": -0.09320171177387238,
+  "max": 0.8322842121124268,
+  "colormap": "viridis",
+  "nodata": "NaN",
+  "notes": "Resampled bilinear from CMG grid; CF packed scaling applied if attrs present."
+}

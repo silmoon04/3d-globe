@@ -1,0 +1,6 @@
+numpy>=1.23
+pillow>=10
+h5py>=3.10
+pyhdf>=0.11.4
+xarray>=2024.6.0
+

@@ -3,10 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Three.js + GeoJSON</title>
+    <title>3D Earth Globe - NASA VIIRS NDVI</title>
     <style>
+      :root {
+        --ui-bg: rgba(0,0,0,0.55);
+        --ui-border: rgba(255,255,255,0.15);
+        --ui-text: #fff;
+        --ui-radius: 8px;
+        --ui-spacing: 12px;
+      }
+      
       body {
         margin: 0;
+      }
+      
+      #controls-ui {
+        position: absolute;
+        top: var(--ui-spacing);
+        right: var(--ui-spacing);
+        background: var(--ui-bg);
+        border: 1px solid var(--ui-border);
+        backdrop-filter: blur(6px);
+        color: var(--ui-text);
+        font-family: system-ui, sans-serif;
+        font-size: 12px;
+        padding: 12px 16px;
+        border-radius: var(--ui-radius);
+        z-index: 10;
+        min-width: 220px;
+      }
+      
+      #controls-ui h3 {
+        margin: 0 0 var(--ui-spacing) 0;
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+      
+      .control-group {
+        margin-bottom: 10px;
+      }
+      
+      .control-group label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 4px 0;
+      }
+      
+      .control-group input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+      }
+      
+      .control-group input[type="range"] {
+        width: 100%;
+        margin-top: 4px;
+      }
+      
+      .control-label {
+        display: block;
+        margin-bottom: 4px;
+        opacity: 0.8;
+        font-size: 11px;
+      }
+      
+      .control-value {
+        opacity: 0.6;
+        font-size: 10px;
+        margin-left: 4px;
       }
     </style>
      <script type="importmap">
@@ -20,5 +85,49 @@
   </head>
   <body>
     <script type="module" src="index.js"></script>
+    <div id="controls-ui">
+      <h3>Globe Controls</h3>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="toggle-atmosphere" checked>
+          Show Atmosphere
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="toggle-clouds" checked>
+          Show Clouds
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Overlay Blend <span class="control-value" id="overlay-blend-value">80%</span></span>
+        <input type="range" id="overlay-blend" min="0" max="100" step="1" value="80">
+      </div>
+      
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="toggle-lens">
+          Lens Reveal
+        </label>
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Global Speed <span class="control-value" id="global-speed-value">1.0x</span></span>
+        <input type="range" id="global-speed" min="-10" max="10" step="0.1" value="1.0">
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Earth Speed <span class="control-value" id="earth-speed-value">1.0x</span></span>
+        <input type="range" id="earth-speed" min="-10" max="10" step="0.1" value="1.0">
+      </div>
+      
+      <div class="control-group">
+        <span class="control-label">Cloud Speed <span class="control-value" id="cloud-speed-value">1.5x</span></span>
+        <input type="range" id="cloud-speed" min="-10" max="10" step="0.1" value="1.5">
+      </div>
+    </div>
   </body>
 </html>
