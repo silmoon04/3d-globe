@@ -5,6 +5,7 @@ Interactive 3D Earth visualization built with Three.js featuring real-time NASA 
 [![Three.js](https://img.shields.io/badge/Three.js-v0.170-blue)](https://threejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE.md)
 
+![GIF Demo](https://github.com/silmoon04/3d-globe/blob/main/3d%20Globe%20showcase.gif)
 ---
 
 ## Features
