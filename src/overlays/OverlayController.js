@@ -4,7 +4,19 @@ import { TimelapsePlayer } from "./TimelapsePlayer.js";
 import { vec3ToLatLon, latLonToUV } from "../utils/geo.js";
 import { TextureLoaderUtil } from "../utils/textureLoader.js";
 
+/**
+ * Manages the lifecycle and rendering of data overlays on the 3D Globe.
+ * Handles manifest loading, texture fetching, and timelapse playback.
+ */
 export class OverlayController {
+  /**
+   * @param {Object} config - Configuration object
+   * @param {THREE.Scene} config.scene - The Three.js scene
+   * @param {THREE.Camera} config.camera - The active camera
+   * @param {THREE.WebGLRenderer} config.renderer - The renderer instance
+   * @param {THREE.Group} config.earthGroup - The Earth mesh group
+   * @throws {Error} If earthGroup is missing required userData
+   */
   constructor({ scene, camera, renderer, earthGroup }) {
     this.scene = scene; 
     this.camera = camera; 
@@ -13,7 +25,9 @@ export class OverlayController {
     if (!earthGroup?.userData?.earthMesh) throw new Error("Earth mesh not found; overlays require the primary Earth.");
     
     this.timelapse = new TimelapsePlayer(this);
+    /** @type {Object|null} Cached manifest data */
     this.manifest = null;
+    /** @type {Object} Current overlay state */
     this.current = { overlayId: null, date: null, meta: null, raw: null };
     this.currentOverlay = null;
     this.material = null;
@@ -23,6 +37,11 @@ export class OverlayController {
     this._wireLensMove();
   }
 
+  /**
+   * Initializes the shader material for overlay rendering.
+   * Preserves existing textures from the Earth mesh.
+   * @private
+   */
   _initMaterial() {
     const { dayTexture, nightTexture, topographyTexture } = this.earthGroup.userData.getTextures();
     [dayTexture, nightTexture].forEach(t => { if (t) t.colorSpace = THREE.SRGBColorSpace; });
@@ -32,6 +51,10 @@ export class OverlayController {
     this.earthGroup.userData.replaceEarthMaterial(this.material);
   }
 
+  /**
+   * Loads the overlay manifest configuration.
+   * @private
+   */
   async _loadManifest() {
     try {
       const res = await fetch('./overlays/manifest.json');
@@ -52,11 +75,20 @@ export class OverlayController {
     }
   }
 
-  // Public method for timelapse to call
+  /**
+   * Loads a specific overlay frame.
+   * @param {string} overlayId - ID of the overlay dataset
+   * @param {string} date - ISO date string of the frame
+   */
   async loadOverlay(overlayId, date) {
     await this._loadOverlay(overlayId, date);
   }
 
+  /**
+   * Internal implementation of overlay loading.
+   * Fetches texture, metadata, and raw binary data in parallel.
+   * @private
+   */
   async _loadOverlay(overlayId, date) {
     const base = `./overlays/${overlayId}/${date}`;
     try {
