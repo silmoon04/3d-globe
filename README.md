@@ -1,349 +1,56 @@
-# 3D Earth Globe with NASA Data Overlay System
+# 3D globe with NASA vegetation data
 
-Interactive 3D Earth visualization built with Three.js featuring real-time NASA satellite data overlays and timelapse playback for climate data analysis.
+An interactive Three.js globe for exploring monthly vegetation data. It combines an Earth renderer with preprocessed NASA VIIRS NDVI overlays, a timeline player and a movable lens for comparing the overlay with the surface below.
 
-[![Three.js](https://img.shields.io/badge/Three.js-v0.170-blue)](https://threejs.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE.md)
+The bundled dataset contains 163 monthly frames, from February 2012 to August 2025. These are historical files served with the app, not a live satellite feed.
 
-![GIF Demo](https://github.com/silmoon04/3d-globe/blob/main/3d%20Globe%20showcase.gif)
----
+![Globe and vegetation overlay demo](3d%20Globe%20showcase.gif)
 
-## Features
+## Run locally
 
-### Rendering
-- **Day/Night Shader** - Dynamic lighting with city lights and realistic terminator
-- **Topographic Terrain** - Vertex displacement based on elevation data
-- **Atmospheric Effects** - Fresnel-based edge glow
-- **Cloud Layer** - Independent rotation at 1.5x Earth speed
-- **Scientific Accuracy** - 23.5° axial tilt implementation
-
-### Data Visualization
-- **VIIRS NDVI Data** - 163 months of global vegetation index (2012-2025)
-- **Timelapse Player** - Animate 13+ years of climate data with playback controls
-- **Blend Control** - Variable opacity overlay mixing (0-100%)
-- **Lens Reveal** - Side-by-side comparison tool
-
-### Performance
-- 60 FPS rendering with GPU acceleration
-- Optimized geometry (configurable mesh quality)
-- Smart frame caching for smooth playback
-- On-demand texture streaming
-
----
-
-## Installation
-
-### Requirements
-- Python 3.8+ (for data processing)
-- Modern web browser with WebGL support
-- NASA Earthdata account (optional, for data download)
-
-### Setup
+Use Python 3 and a browser with WebGL support. No npm installation or build step is needed to view the bundled data.
 
 ```bash
-# Clone repository
-git clone https://github.com/silmoon04/3d-globe.git
+git clone --depth 1 https://github.com/silmoon04/3d-globe.git
 cd 3d-globe
-
-# Install Python dependencies
-cd scripts/preprocess
-pip install -r requirements.txt
-
-# For HDF4 support (MODIS data)
-conda create -n nasa python=3.12
-conda activate nasa
-conda install -c conda-forge pyhdf hdf4 numpy pillow h5py xarray
-```
-
-### Running
-
-```bash
-# Start local server from project root
 python -m http.server 8080
-
-# Open browser to http://localhost:8080
 ```
 
----
+Open [localhost:8080](http://localhost:8080). Serve the repository root rather than opening `index.html` directly: the app loads ES modules, textures and overlay files over HTTP. Three.js 0.170 and OrbitControls are imported from jsDelivr, so the browser also needs internet access.
 
-## Architecture
+The repository includes the preprocessed imagery and raw overlay data, which make the download much larger than the application code.
 
-```
-src/
-├── config.js                   # Centralized configuration
-├── shaders/                    # GLSL shaders
-│   ├── earthShaders.js         # Surface, clouds, atmosphere
-│   └── overlayShaders.js       # Data overlay blending
-├── utils/                      # Core utilities
-│   ├── geo.js                  # Coordinate conversions
-│   ├── textureLoader.js        # Texture loading with retry logic
-│   └── sceneHelpers.js         # Three.js factories
-├── ui/                         # User interface
-│   └── globeControls.js        # Control event handlers
-├── overlays/                   # NASA data system
-│   ├── OverlayController.js    # Main controller
-│   ├── OverlayMaterial.js      # Shader material
-│   ├── Probe.js                # Click-to-probe (optional)
-│   └── TimelapsePlayer.js      # Animation player
-├── separateCloudEarth.js       # Main Earth renderer
-├── simpleEarth.js              # Fallback renderer
-└── getStarfield.js             # Background stars
-```
+## Explore the globe
 
-### Key Design Features
+- Drag to orbit and scroll to zoom.
+- Use the bottom timeline to select a month, play or pause, change playback speed, or loop the sequence.
+- Adjust overlay opacity in the control panel. Enable the lens and move the pointer over the globe to reveal the overlay within a circular area.
+- Toggle clouds and atmosphere, or adjust the Earth and cloud rotation speeds.
 
-- **Modular Architecture** - 15 focused modules with clear separation of concerns
-- **Factory Pattern** - Consistent object creation through helper functions
-- **Centralized Configuration** - All settings managed in `config.js`
-- **100% JSDoc Coverage** - Complete inline documentation
-- **DRY Principles** - Reusable utilities eliminate code duplication
+| Key | Action |
+| --- | --- |
+| Space | Play or pause the timeline |
+| Left / Right arrow | Previous or next month |
+| Home / End | First or last month |
+| L | Toggle the lens |
 
----
+## Implementation
 
-## Configuration
+The application extends [bobbyroe's Three.js globe](https://github.com/bobbyroe/3d-globe-with-threejs) with satellite overlays and timeline controls.
 
-All settings are centralized in `src/config.js`:
+- `index.js` creates the scene and connects the globe, UI and overlay controller.
+- `src/shaders/` contains the GLSL for day/night textures, topographic displacement, clouds, atmospheric glow and overlay blending.
+- `src/overlays/OverlayController.js` reads the manifest and loads the selected month's texture, metadata and raw values. `TimelapsePlayer.js` handles timeline navigation.
+- `src/config.js` holds rendering settings. For example, `CONFIG.STARS.count` controls the number of background stars.
+- `scripts/preprocess/` converts HDF/HDF5 source files into PNG overlays, Float32 data and JSON metadata. See the [preprocessing guide](scripts/README.md) to add data.
 
-```javascript
-export const CONFIG = {
-  // Geometry
-  EARTH_RADIUS: 2.0,
-  SPHERE_SEGMENTS: { width: 64, height: 32 },
-  
-  // Animation
-  BASE_ROTATION_SPEED: 0.001,
-  CLOUD_SPEED_MULTIPLIER: 1.5,
-  
-  // Camera
-  CAMERA_FOV: 35,
-  MIN_ZOOM: 3.5,
-  MAX_ZOOM: 10,
-  
-  // Performance
-  STAR_COUNT: 1000,
-  TIMELAPSE_CACHE_SIZE: 5
-};
-```
+The rendering is illustrative. Overlay colours use per-frame bounds recorded in each `meta.json`, so the same colour is not necessarily the same NDVI value in every month. Fixed colour bounds are needed for a quantitative comparison across frames. Frames are loaded on demand; playback speed depends on file loading and the browser's rendering performance.
 
----
+## Data and credits
 
-## Data Processing
+- The bundled overlay is VIIRS NDVI, a vegetation index, sourced through NASA's Land Processes DAAC. Product metadata and dates are listed in [`overlays/manifest.json`](overlays/manifest.json).
+- The base globe comes from [bobbyroe/3d-globe-with-threejs](https://github.com/bobbyroe/3d-globe-with-threejs).
+- [Texture source notes](textures/README.md) list NASA Visible Earth, Blue Marble and Solar System Scope.
+- Rendering uses [Three.js](https://threejs.org/).
 
-### Primary Dataset: VIIRS NDVI
-
-**VNP13C2** - Vegetation Index (Normalized Difference Vegetation Index)
-- **Resolution**: 0.05° CMG (~5.6km at equator)
-- **Temporal**: Monthly composites
-- **Coverage**: 163 months (February 2012 - August 2025)
-- **Format**: HDF5
-- **Data Range**: -0.07 to 0.81 (vegetation health indicator)
-
-The system supports other NASA CMG products (MOD11C3, MOD10C1, MCD43C3) via the batch processor.
-
-### Processing Pipeline
-
-```bash
-# Single file conversion
-cd scripts/preprocess
-python hdf_to_overlay.py --in ../../datasets/file.hdf --id overlay_name --date 2025-01-01 --out ../../overlays
-
-# Batch processing (auto-detects product type)
-python batch_process.py --folder ../../datasets --out ../../overlays --parallel 4
-```
-
-**Output:**
-- `overlay_color.png` - Visualization texture (4096x2048)
-- `overlay_raw.bin` - Raw Float32 data
-- `meta.json` - Metadata (range, units, projection)
-
----
-
-## Controls
-
-### Mouse
-- **Drag** - Rotate globe
-- **Scroll** - Zoom in/out
-
-### Keyboard
-- `Space` - Play/pause timelapse
-- `←` `→` - Navigate frames
-- `Home` `End` - Jump to first/last frame
-- `L` - Toggle lens reveal
-
-### UI Panel (Top-Right)
-- Show/hide atmosphere
-- Show/hide clouds  
-- Overlay blend (0-100%)
-- Lens reveal toggle
-- Global speed multiplier
-- Earth/cloud rotation speeds
-
-### Timelapse Player (Bottom)
-- Play/pause button
-- Previous/next frame
-- Timeline scrubber
-- Speed selector (0.25x - 10x)
-- Loop checkbox
-
----
-
-## API Examples
-
-### Creating Custom Earth
-
-```javascript
-import { createSeparateCloudEarthMesh } from './src/separateCloudEarth.js';
-import { CONFIG } from './src/config.js';
-
-const earth = await createSeparateCloudEarthMesh(
-  CONFIG.EARTH_RADIUS,
-  CONFIG.BASE_ROTATION_SPEED
-);
-scene.add(earth);
-```
-
-### Loading Textures
-
-```javascript
-import { TextureLoaderUtil } from './src/utils/textureLoader.js';
-
-// Simple load with automatic error handling
-const texture = await TextureLoaderUtil.load('./texture.jpg');
-
-// Auto-retry with multiple paths
-const texture = await TextureLoaderUtil.load([
-  './texture.jpg',
-  './texture.png',
-  './fallback.jpg'
-]);
-```
-
-### Using Configuration
-
-```javascript
-import { CONFIG, getLayerRadius } from './src/config.js';
-
-const cloudRadius = getLayerRadius('cloud'); // 2.1 (1.05 × 2.0)
-const starCount = CONFIG.STAR_COUNT;          // 1000
-```
-
----
-
-## Development
-
-### Code Standards
-
-- **Functions** - Small, focused (< 30 lines)
-- **Documentation** - JSDoc required for all public functions
-- **Modules** - Single responsibility per file
-- **Naming** - Descriptive, clear purpose
-
-### Adding Features
-
-1. Add configuration to `src/config.js` if needed
-2. Create module in appropriate directory
-3. Document with JSDoc
-4. Import and integrate
-5. Test thoroughly
-
-### JSDoc Example
-
-```javascript
-/**
- * Create Earth mesh with all layers
- * 
- * @param {number} radius - Earth radius in scene units
- * @param {number} rotationSpeed - Base rotation speed (radians/frame)
- * @returns {Promise<THREE.Group>} Earth group containing all layers
- * @throws {Error} If texture loading fails
- * 
- * @example
- * const earth = await createSeparateCloudEarthMesh(2.0, 0.001);
- * scene.add(earth);
- */
-export async function createSeparateCloudEarthMesh(radius, rotationSpeed) {
-  // Implementation
-}
-```
-
----
-
-## Troubleshooting
-
-### Globe Not Rendering
-
-1. Check browser console for errors (F12)
-2. Verify WebGL support: `chrome://gpu`
-3. Ensure using HTTP server (not `file://` protocol)
-4. Check texture files exist in `textures/` directory
-
-### Overlay Issues
-
-1. Verify `overlays/manifest.json` exists
-2. Check overlay data files are present
-3. Re-run batch processor if needed
-4. Check browser network tab for 404 errors
-
-### Performance Issues
-
-Adjust settings in `src/config.js`:
-```javascript
-STAR_COUNT: 500,                        // Reduce stars
-SPHERE_SEGMENTS: { width: 32, height: 16 },  // Lower quality
-```
-
----
-
-## Technical Details
-
-### Technologies
-- Three.js 0.170 - 3D rendering engine
-- WebGL 2.0 - GPU acceleration
-- GLSL - Custom shader programming
-- Python 3.12 - Data processing
-- NumPy/Pillow - Scientific computing
-
-### Performance Metrics
-- **Rendering**: 60 FPS on modern hardware
-- **Memory**: ~50-100 MB base, ~200 MB with cache
-- **Processing**: ~30-60 sec per HDF file
-- **Batch (300 files)**: ~40-60 min with 4 workers
-
----
-
-## Contributing
-
-Contributions welcome. Please:
-1. Follow existing code style
-2. Add JSDoc documentation
-3. Keep functions small and focused
-4. Test thoroughly before submitting
-5. Include clear commit messages
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
----
-
-## License
-
-MIT License - See [LICENSE.md](LICENSE.md) for details.
-
-### Credits
-
-- **Original Code**: Based on [@bobbyroe's 3d-globe-with-threejs](https://github.com/bobbyroe/3d-globe-with-threejs)
-- **Data**: NASA EOSDIS Land Processes DAAC
-- **Textures**: NASA Visible Earth
-- **Engine**: Three.js by mrdoob and contributors
-
----
-
-## References
-
-- [Three.js Documentation](https://threejs.org/docs/)
-- [NASA Earthdata](https://earthdata.nasa.gov/)
-- [MODIS Products](https://modis.gsfc.nasa.gov/)
-- [WebGL Specification](https://www.khronos.org/webgl/)
-
----
-
-**For questions or issues, please open a GitHub issue.**
+The repository's existing [software licence](LICENSE.md) is BSD-2-Clause. Its copyright notice is retained. Satellite data and third-party textures have their own source terms; the software licence does not replace those terms.

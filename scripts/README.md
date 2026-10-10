@@ -1,209 +1,58 @@
-# Scripts Directory
+# Preprocessing satellite data
 
-Tools for downloading and processing NASA satellite data.
+These scripts convert downloaded HDF/HDF5 files into the files used by the globe. They are optional: the repository already contains the VIIRS NDVI overlays needed to run the app.
 
-## 📁 Files
+## Setup
 
-### Download Scripts
-- **`modis_lst_urls.txt`** - List of 308 MODIS LST download URLs (2000-2025)
-- **`Download-LST.ps1`** - PowerShell script to download all files from URL list
-
-### Preprocessing
-- **`preprocess/`** - Data conversion tools
-  - `hdf_to_overlay.py` - Convert single HDF/HDF5 → web overlay
-  - `batch_process.py` - Auto-detect & process entire folders
-  - `requirements.txt` - Python dependencies
-  - `make_examples.sh` - Example commands
-
-## 🚀 Usage
-
-### Download Data (Windows)
-
-```powershell
-# Using PowerShell (recommended)
-cd scripts
-powershell -ExecutionPolicy Bypass -File Download-LST.ps1
-# Enter your NASA Earthdata credentials when prompted
-```
-
-**Or download manually:**
-1. Get URLs from `modis_lst_urls.txt`
-2. Use browser/wget/curl to download to `../datasets/`
-
-### Process Data
+Use a Python environment with the packages in `preprocess/requirements.txt`. From the repository root:
 
 ```bash
-cd preprocess
-
-# Single file
-python hdf_to_overlay.py \
-  --in ../../datasets/MOD11C3.A2025244.061.hdf \
-  --id modis_lst \
-  --date 2025-09-01 \
-  --out ../../overlays
-
-# Entire folder (auto-detects product types)
-python batch_process.py \
-  --folder ../../datasets \
-  --out ../../overlays \
-  --parallel 4
-
-# Specific product only
-python batch_process.py \
-  --folder ../../datasets \
-  --out ../../overlays \
-  --product modis_lst \
-  --parallel 4
-
-# Dry run (preview without processing)
-python batch_process.py \
-  --folder ../../datasets \
-  --out ../../overlays \
-  --dry-run
+python -m pip install -r scripts/preprocess/requirements.txt
 ```
 
-## 📊 Supported Products
+HDF4 products need `pyhdf` and the HDF4 native libraries. If those are unavailable through pip on your platform, a Conda environment with `conda install -c conda-forge pyhdf hdf4` is another option. HDF5 files are read with `h5py`.
 
-`batch_process.py` auto-detects these NASA products:
+Download source files separately from the relevant NASA data service and place them in a `datasets/` folder. Access requirements depend on the product. No downloader or credentials are included here.
 
-| Product Code | Full Name | File Pattern | Output ID |
-|-------------|-----------|--------------|-----------|
-| `modis_lst` | MODIS Land Surface Temperature | `MOD11C3.A*.hdf` | `modis_lst` |
-| `viirs_ndvi` | VIIRS Vegetation Index | `VNP13C2.A*.h5` | `viirs_ndvi` |
-| `modis_snow` | MODIS Snow Cover | `MOD10C1.A*.hdf` | `modis_snow` |
-| `modis_albedo` | MODIS Albedo | `MCD43C3.A*.hdf` | `modis_albedo_sw` |
-| `modis_nbar` | MODIS NBAR | `MCD43C4.A*.hdf` | `modis_nbar_band1` |
+## Convert files
 
-### Add New Products
-
-Edit `preprocess/batch_process.py` → `PRODUCT_PATTERNS`:
-
-```python
-PRODUCT_PATTERNS = {
-    'your_product': {
-        'pattern': r'YOUR_FILE\.A(\d{7})\.',  # Regex for filename
-        'id': 'your_id',
-        'name': 'Your Product Name',
-        'units': 'your units',
-        'var': 'HDF/path/to/variable',  # Dataset path in HDF
-        'extension': '.hdf',  # or .h5
-        'min': 0,    # Data range min (optional)
-        'max': 100   # Data range max (optional)
-    }
-}
-```
-
-## 🔧 Advanced Options
-
-### Custom Data Range
+Run these commands from the repository root. Replace `source.h5` and its date with the file you downloaded.
 
 ```bash
-python hdf_to_overlay.py \
-  --in dataset.hdf \
-  --var "HDFEOS/GRIDS/Grid/Data_Fields/Variable" \
-  --id my_overlay \
-  --date 2025-01-01 \
-  --out ../../overlays \
-  --min -50 \
-  --max 50
+python scripts/preprocess/hdf_to_overlay.py --in datasets/source.h5 --id viirs_ndvi --date 2025-01-01 --out overlays
 ```
 
-### Specify Variable Path
+The converter can select a variable with `--var`, set output dimensions with `--width` and `--height`, and set colour bounds with `--min` and `--max`.
+
+For a folder of recognised products, preview the files before processing them:
 
 ```bash
-# For HDF5 files, find variable with:
-h5dump -n dataset.h5
-
-# For HDF4 files:
-ncdump -h dataset.hdf
-
-# Then use path in --var:
-python hdf_to_overlay.py \
-  --in dataset.h5 \
-  --var "HDFEOS/GRIDS/MyGrid/Data_Fields/MyVariable" \
-  --id my_data \
-  --date 2025-01-01 \
-  --out ../../overlays
+python scripts/preprocess/batch_process.py --folder datasets --out overlays --dry-run
+python scripts/preprocess/batch_process.py --folder datasets --out overlays --parallel 4
 ```
 
-### Parallel Processing
+The batch processor recognises these filename prefixes:
 
-```bash
-# Use more workers for faster processing
-python batch_process.py \
-  --folder ../../datasets \
-  --out ../../overlays \
-  --parallel 8  # 8 CPU cores
+| Prefix | Product | Output ID |
+| --- | --- | --- |
+| VNP13C2 | VIIRS vegetation index | `viirs_ndvi` |
+| MOD11C3 | MODIS land surface temperature | `modis_lst` |
+| MOD10C1 | MODIS snow cover | `modis_snow` |
+| MCD43C3 | MODIS albedo | `modis_albedo_sw` |
+| MCD43C4 | MODIS nadir BRDF-adjusted reflectance | `modis_nbar_band1` |
 
-# Or fewer for less CPU usage
-python batch_process.py \
-  --folder ../../datasets \
-  --out ../../overlays \
-  --parallel 2
-```
+Use `--product` to restrict a batch to one key in `PRODUCT_PATTERNS`. Only VIIRS NDVI is bundled with the current app; the other entries are conversion support.
 
-## 📦 Output Format
+## Output
 
-Each processed dataset creates:
+Each converted date produces these files under `overlays/<id>/<YYYY-MM-DD>/`:
 
-```
-overlays/
-└── [overlay_id]/
-    └── [YYYY-MM-DD]/
-        ├── overlay_color.png    # 3600×1800 RGBA visualization
-        ├── overlay_raw.bin      # Float32 raw data (for probing)
-        └── meta.json            # Metadata
-```
+- `overlay_color.png`: a colour texture, 4096 by 2048 pixels by default.
+- `overlay_raw.bin`: the resampled values stored as Float32 data.
+- `meta.json`: dimensions, colour bounds, units and conversion notes.
 
-**meta.json** contains:
-```json
-{
-  "width": 3600,
-  "height": 1800,
-  "min": 230.5,
-  "max": 329.8,
-  "units": "Kelvin",
-  "projection": "equirectangular"
-}
-```
+The batch processor also writes `overlays/manifest.json`, which the browser reads to populate the timeline. After a single-file conversion, add its date to the matching overlay entry in the manifest yourself. Use a separate `--out` directory when experimenting if you want to keep the bundled dataset unchanged.
 
-## 🐛 Troubleshooting
+Check the batch output for failed conversions before using the generated timeline: detected dates can be listed even when their conversion failed. The current browser app loads the first overlay in the manifest and has no dataset selector, so put the product you want to view first.
 
-**"pyhdf not installed"**
-```bash
-# HDF4 files (MODIS) need conda:
-conda install -c conda-forge pyhdf hdf4
-```
-
-**"Unable to open HDF file"**
-- File might be corrupted - re-download
-- Check file permissions
-- Verify it's actually HDF format: `file dataset.hdf`
-
-**"KeyError: variable not found"**
-- List variables: `h5dump -n file.h5` or `ncdump -h file.hdf`
-- Update `--var` path or let script auto-detect (omit `--var`)
-
-**Processing stuck**
-- Reduce `--parallel` value
-- Check available RAM (each worker uses ~500 MB)
-- Monitor with Task Manager/htop
-
-**Wrong colors**
-- Edit `hdf_to_overlay.py` → `colorize_viridis()` function
-- Adjust `--min` and `--max` ranges
-
-## 📚 References
-
-- **HDF5**: https://www.hdfgroup.org/solutions/hdf5/
-- **NASA Data Formats**: https://earthdata.nasa.gov/esdis/esco/standards-and-practices
-- **MODIS Products**: https://modis.gsfc.nasa.gov/data/dataprod/
-- **VIIRS Products**: https://viirsland.gsfc.nasa.gov/
-
----
-
-**Need help?** Check main `README.md` or open an issue.
-
-
-
-
+The single-file converter uses each frame's 2nd and 98th percentiles unless explicit bounds are supplied. The VIIRS batch configuration uses this default; the MODIS configurations supply fixed bounds. For quantitative comparisons across months, convert the files with the same explicit `--min` and `--max`; otherwise a colour can represent different values in different frames. Choose bounds appropriate to the source product and check its scaling and units.
